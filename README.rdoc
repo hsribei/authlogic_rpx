@@ -1,25 +1,26 @@
-= Authlogic OpenID
+= Authlogic RPX
 
-Authlogic OpenID is an extension of the Authlogic library to add OpenID support. Authlogic v2.0 introduced an enhanced API that makes "plugging in" alternate authentication methods as easy as installing a gem.
+Authlogic RPX is an extension of the Authlogic library to add RPX support. Authlogic v2.0 introduced an enhanced API that makes "plugging in" alternate authentication methods as easy as installing a gem.
 
-== Helpful links
+== Helpful links for Authlogic
 
 *	<b>Documentation:</b> http://authlogic.rubyforge.org
 *	<b>Authlogic:</b> http://github.com/binarylogic/authlogic
-*	<b>Live example:</b> http://authlogicexample.binarylogic.com
 
 == Install and use
 
 === 1. Make some simple changes to your database:
 
-  class AddUsersOpenidField < ActiveRecord::Migration
+  class AddUsersRpxIdentifier < ActiveRecord::Migration
     def self.up
-      add_column :users, :openid_identifier, :string
-      add_index :users, :openid_identifier
+      add_column :users, :rpx_identifier, :string
+      add_index :users, :rpx_identifier
 
       change_column :users, :login, :string, :default => nil, :null => true
       change_column :users, :crypted_password, :string, :default => nil, :null => true
       change_column :users, :password_salt, :string, :default => nil, :null => true
+      
+      
     end
 
     def self.down
@@ -32,62 +33,82 @@ Authlogic OpenID is an extension of the Authlogic library to add OpenID support.
     end
   end
 
-=== 2. Install the openid_authentication plugin
+=== 2. Install the rpx_now plugin
 
-  $ script/plugin install git://github.com/rails/open_id_authentication.git
-  $ rake open_id_authentication:db:create
+  $ script/plugin install git://github.com/grosser/rpx_now.git
 
-For more information on how to configure the plugin, checkout it's README: http://github.com/rails/open_id_authentication/tree/master
+=== 2a. Configure the rpx_now plugin
+
+Create an account at rpxnow.com and get your RPX API Key.
+
+Add one of these to your views:
+
+<%= RPXNow.embed_code('mywebsite',rpx_login_url) %>
+
+..or..
+
+<%= RPXNow.popup_code('Login with Facebook, Google or other account','mywebsite', rpx_login_url,:language=>'en') %>
+
+Don't forgot to replace 'mywebsite' with the relevant realm for your site.
+
+Make sure you have set up a route for rpx_login_url (RPX only returns a GET)
+
+map.rpx_login 'login/rpx', :controller => 'user_sessions', :action => 'create'
+
+Add the key to your relevant development environment:
+
+RPXNow.api_key = 'YOUR RPX API KEY'
 
 === 3. Install the Authlogic Openid gem
 
-  $ sudo gem install authlogic-oid
+  $ sudo gem install authlogic-rpx
 
 Now add the gem dependency in your config:
 
-  config.gem "authlogic-oid", :lib => "authlogic_openid"
+  config.gem "authlogic-rpx", :lib => "authlogic_rpx"
 
 Or for older version of rails, install it as a plugin:
 
-  $ script/plugin install git://github.com/binarylogic/authlogic_openid.git
+  $ script/plugin install git://github.com/binarylogic/authlogic_rpx.git
 
-=== 4. Make sure you save your objects properly
+=== 4. Handling user data
 
-You only need to save your objects this way if you want the user to authenticate with their OpenID provider.
+The use case for originally building this was using the returned user data to inform the account creation form rather than setting the user attributes directly.
 
-That being said, you probably want to do this in your controllers. You should do this for BOTH your User objects and UserSession objects (assuming you are authenticating users). It should look something like this:
+Authlogic RPX is currently not  optimised for the Authlogic way of doing things so for the moment something like this will work:
 
-  @user_session.save do |result|
-    if result
-      flash[:notice] = "Login successful!"
-      redirect_back_or_default account_url
+In your user session controller
+
+def create
+  @user_session = UserSession.new(params[:user_session])
+  
+  if @user_session.save
+    flash[:notice] = "Login successful!"
+    redirect_back_or_default user_url(@user_session.user)
+  else
+    if @user_session.rpx_data
+      @user = User.new(@user_session.rpx_data)
+      session.delete(:rpx_identifier)
+      session[:rpx_identifier] = @rpx_identifier = @user_session.rpx_data[:rpx_identifier]
+      render :template => "users/new"
     else
       render :action => :new
     end
   end
+end
 
-You should save your @user objects this way as well, because you also want the user to verify that they own the OpenID identifier that they supplied.
+In your user controller
 
-Notice we are saving with a block. Why? Because we need to redirect the user to their OpenID provider so that they can authenticate. When we do this, we don't want to execute that block of code, because if we do, we will get a DoubleRender error. This lets us skip that entire block and send the user along their way without any problems.
+def create
+  @user = User.new(params[:user])
+  @user.rpx_identifier = @rpx_identifier = session[:rpx_identifier] if session[:rpx_identifier]
 
-That's it! The rest is taken care of for you.
+  # etc
+end
 
-== Redirecting from the models?
+=== TODO
 
-If you are interested, I explain myself below. Regardless, you don't have to use this library. As you saw in the setup instructions, this library leverages the open_id_authentication rails plugin. You can EASILY use this in your controllers and do your traditional OpenID authentication yourself. After the user has been authenticated just do this:
+Get Tests working
+Clean up registration data handling
 
-  UserSession.create(@user)
-
-It's that simple. For more information there is a great OpenID tutorial at: http://railscasts.com/episodes/68-openid-authentication
-
-Now, here are my thoughts on the subject:
-
-You are probably thinking: "Ben, you can't handle controller responsibilities in models". I agree with you on that comment, but my personal opinion is that these are not controller responsibilities. The fact that OpenID authentication requires a redirect should not effect the location of the logic / code. It's all part of the authentication process, which is the entire purpose of this library. The logic that handles this process should be in it's own domain, which is the definition of the "M" in MVC. The "M" doesn't have to just be a data access layer, it's a place for domain logic.
-
-What if you wanted to authenticate with OpenID in multiple controllers in your application? You would probably pull out the common code into a module and include it in the respective controllers. Even better, you might create a class that elegantly handles this process and then place it in your lib directory. That's exactly what this is.
-
-The last thing I will leave you with, to get you thinking, is... where do sweepers lie in the MVC pattern?
-
-Regardless, if I still haven't convinced you, I hope this library is of some benefit to you. At the very least an example of how to extend Authlogic.
-
-Copyright (c) 2009 Ben Johnson of [Binary Logic](http://www.binarylogic.com), released under the MIT license
+Copyright (c) 2009 Hunter Nield of [Syndeo Labs](http://www.syndeolabs.com), released under the MIT license

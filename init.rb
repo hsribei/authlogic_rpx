@@ -1,1 +1,1 @@
-require "authlogic_openid"
+require "authlogic_rpx"

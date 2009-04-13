@@ -7,17 +7,6 @@ ActiveRecord::Schema.verbose = false
 ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :dbfile => ":memory:")
 ActiveRecord::Base.configurations = true
 ActiveRecord::Schema.define(:version => 1) do
-  create_table :open_id_authentication_associations, :force => true do |t|
-    t.integer :issued, :lifetime
-    t.string :handle, :assoc_type
-    t.binary :server_url, :secret
-  end
-
-  create_table :open_id_authentication_nonces, :force => true do |t|
-    t.integer :timestamp, :null => false
-    t.string :server_url, :null => true
-    t.string :salt, :null => false
-  end
   
   create_table :users do |t|
     t.datetime  :created_at
