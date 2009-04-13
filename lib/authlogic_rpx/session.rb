@@ -38,25 +38,9 @@ module AuthlogicRpx
       self.rpx_identifier = hash[:rpx_identifier] if !hash.nil? && hash.key?(:rpx_identifier)
       self.rpx_data = hash[:rpx_data] if !hash.nil? && hash.key?(:rpx_data)
     end
-    
-    # def rpx_identifier=(value)
-    #   @rpx_identifier = value.blank? ? nil : OpenIdAuthentication.normalize_identifier(value)
-    #   @rpx_error = nil
-    # rescue OpenIdAuthentication::InvalidOpenId => e
-    #   @rpx_identifier = nil
-    #   @rpx_error = e.message
-    # end
-  
-    # Clears out the block if we are authenticating with RPX, so that we can redirect without a DoubleRender
-    # error.
-    # def save(&block)
-    #   block = nil if !rpx_identifier.blank?
-    #   super(&block)
-    # end
   
     private
       def authenticating_with_rpx?
-        #!rpx_identifier.blank? || (controller.params[:token] && controller.params[:for_session])
         controller.params[:token]
       end
 

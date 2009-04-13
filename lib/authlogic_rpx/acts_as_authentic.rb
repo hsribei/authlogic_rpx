@@ -26,26 +26,6 @@ module AuthlogicRpx
         end
       end
       
-      # This is where all of the magic happens. This is where we hook in and add all of the RPX sweetness.
-      #
-      # I had to take this approach because when authenticating with RPX nonces and what not are stored in database
-      # tables. That being said, the whole save process for ActiveRecord is wrapped in a transaction. Trying to authenticate
-      # with OpenID in a transaction is not good because that transaction be get rolled back, thus reversing all of the OpenID
-      # inserts and making OpenID authentication fail every time. So We need to step outside of the transaction and do our OpenID
-      # madness.
-      #
-      # Another advantage of taking this approach is that we can set fields from their OpenID profile before we save the record,
-      # if their OpenID provider supports it.
-      # def save(perform_validation = true, &block)
-      #   if !perform_validation || !authenticate_with_rpx? || (authenticate_with_rpx? && authenticate_with_rpx)
-      #     result = super
-      #     yield(result) if block_given?
-      #     result
-      #   else
-      #     false
-      #   end
-      # end
-      
       private
         
         def using_rpx?
