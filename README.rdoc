@@ -59,7 +59,7 @@ Add the key to your relevant development environment:
 
 RPXNow.api_key = 'YOUR RPX API KEY'
 
-=== 3. Install the Authlogic Openid gem
+=== 3. Install the Authlogic-Rpx gem (currently broken, use the plugin)
 
   $ sudo gem install authlogic-rpx
 
@@ -69,7 +69,7 @@ Now add the gem dependency in your config:
 
 Or for older version of rails, install it as a plugin:
 
-  $ script/plugin install git://github.com/binarylogic/authlogic_rpx.git
+  $ script/plugin install git://github.com/hunter/authlogic_rpx.git
 
 === 4. Handling user data
 
